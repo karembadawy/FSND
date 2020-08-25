@@ -41,7 +41,7 @@ class Venue(db.Model):
     phone = db.Column(db.String(120), nullable=True)
     image_link = db.Column(db.String(500), nullable=True)
     facebook_link = db.Column(db.String(120), nullable=True)
-    genres = db.Column(db.String(120), nullable=False)
+    genres = db.Column(db.ARRAY(db.String(120)), nullable=False, default=[])
     website = db.Column(db.String(120), nullable=True)
     seeking_talent = db.Column(db.Boolean, nullable=False, default=False)
     seeking_description = db.Column(db.String(120), nullable=True)
@@ -55,7 +55,7 @@ class Artist(db.Model):
     city = db.Column(db.String(120), nullable=False)
     state = db.Column(db.String(120), nullable=False)
     phone = db.Column(db.String(120), nullable=True)
-    genres = db.Column(db.String(120), nullable=False)
+    genres = db.Column(db.ARRAY(db.String(120)), nullable=False, default=[])
     image_link = db.Column(db.String(500), nullable=True)
     facebook_link = db.Column(db.String(120), nullable=True)
     seeking_venue = db.Column(db.Boolean, nullable=False, default=False)
@@ -148,10 +148,11 @@ def search_venues():
       # query to get upcoming shows for the venue
       upcoming_shows = Show.query.filter_by(id=venue.id).filter(
           Show.start_date > datetime.now()).all()
-      # append venue data to the array
+      # assign values to body
       body['id'] = venue.id
       body['name'] = venue.name
       body['num_upcoming_shows'] = len(upcoming_shows)
+      # append venue data to the array
       venuesData.append(body)
 
     # append response data to the object
@@ -160,93 +161,76 @@ def search_venues():
   except:
     error = True
   if error:
-    abort(400)
+    # render 500 if there is a server error
+    return render_template('errors/500.html')
   else:
     return render_template('pages/search_venues.html', results=responseData, search_term=request.form.get('search_term', ''))
 
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
-  # shows the venue page with the given venue_id
-  # TODO: replace with real venue data from the venues table, using venue_id
-  data1={
-    "id": 1,
-    "name": "The Musical Hop",
-    "genres": ["Jazz", "Reggae", "Swing", "Classical", "Folk"],
-    "address": "1015 Folsom Street",
-    "city": "San Francisco",
-    "state": "CA",
-    "phone": "123-123-1234",
-    "website": "https://www.themusicalhop.com",
-    "facebook_link": "https://www.facebook.com/TheMusicalHop",
-    "seeking_talent": True,
-    "seeking_description": "We are on the lookout for a local artist to play every two weeks. Please call us.",
-    "image_link": "https://images.unsplash.com/photo-1543900694-133f37abaaa5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60",
-    "past_shows": [{
-      "artist_id": 4,
-      "artist_name": "Guns N Petals",
-      "artist_image_link": "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80",
-      "start_time": "2019-05-21T21:30:00.000Z"
-    }],
-    "upcoming_shows": [],
-    "past_shows_count": 1,
-    "upcoming_shows_count": 0,
-  }
-  data2={
-    "id": 2,
-    "name": "The Dueling Pianos Bar",
-    "genres": ["Classical", "R&B", "Hip-Hop"],
-    "address": "335 Delancey Street",
-    "city": "New York",
-    "state": "NY",
-    "phone": "914-003-1132",
-    "website": "https://www.theduelingpianos.com",
-    "facebook_link": "https://www.facebook.com/theduelingpianos",
-    "seeking_talent": False,
-    "image_link": "https://images.unsplash.com/photo-1497032205916-ac775f0649ae?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=750&q=80",
-    "past_shows": [],
-    "upcoming_shows": [],
-    "past_shows_count": 0,
-    "upcoming_shows_count": 0,
-  }
-  data3={
-    "id": 3,
-    "name": "Park Square Live Music & Coffee",
-    "genres": ["Rock n Roll", "Jazz", "Classical", "Folk"],
-    "address": "34 Whiskey Moore Ave",
-    "city": "San Francisco",
-    "state": "CA",
-    "phone": "415-000-1234",
-    "website": "https://www.parksquarelivemusicandcoffee.com",
-    "facebook_link": "https://www.facebook.com/ParkSquareLiveMusicAndCoffee",
-    "seeking_talent": False,
-    "image_link": "https://images.unsplash.com/photo-1485686531765-ba63b07845a7?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=747&q=80",
-    "past_shows": [{
-      "artist_id": 5,
-      "artist_name": "Matt Quevedo",
-      "artist_image_link": "https://images.unsplash.com/photo-1495223153807-b916f75de8c5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=334&q=80",
-      "start_time": "2019-06-15T23:00:00.000Z"
-    }],
-    "upcoming_shows": [{
-      "artist_id": 6,
-      "artist_name": "The Wild Sax Band",
-      "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-      "start_time": "2035-04-01T20:00:00.000Z"
-    }, {
-      "artist_id": 6,
-      "artist_name": "The Wild Sax Band",
-      "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-      "start_time": "2035-04-08T20:00:00.000Z"
-    }, {
-      "artist_id": 6,
-      "artist_name": "The Wild Sax Band",
-      "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-      "start_time": "2035-04-15T20:00:00.000Z"
-    }],
-    "past_shows_count": 1,
-    "upcoming_shows_count": 1,
-  }
-  data = list(filter(lambda d: d['id'] == venue_id, [data1, data2, data3]))[0]
-  return render_template('pages/show_venue.html', venue=data)
+  error = False
+  try:
+    venueData = {}  # empty object to store all the data we need
+    # query to get specific venue
+    venue = Venue.query.get(venue_id)
+    if not venue:
+      # render 404 if not found
+      return render_template('errors/404.html')
+
+    upcomingData = [] # empty array to store shows data
+    # query to get upcoming shows for this venue
+    upcomingShows = Show.query.join(Artist).filter(
+        Show.venue_id == venue_id).filter(Show.start_date > datetime.now()).all()
+
+    for show in upcomingShows:
+      body = {}  # body item of one show
+      # assign values to body
+      body['artist_id'] = show.artist_id
+      body['artist_name'] = show.artist.name
+      body['artist_image_link'] = show.artist.image_link
+      body['start_date'] = show.start_date.strftime(" % Y-%m-%d % H: % M: % S")
+      # append show data to the array
+      upcomingData.append(body)
+
+    pastData = []  # empty array to store shows data
+    # query to get past shows for this venue
+    pastShows = Show.query.join(Artist).filter(
+        Show.venue_id == venue_id).filter(Show.start_date < datetime.now()).all()
+
+    for show in pastShows:
+      body = {}  # body item of one show
+      # assign values to body
+      body['artist_id'] = show.artist_id
+      body['artist_name'] = show.artist.name
+      body['artist_image_link'] = show.artist.image_link
+      body['start_date'] = show.start_date.strftime(" % Y-%m-%d % H: % M: % S")
+      # append show data to the array
+      pastData.append(body)
+
+    # assign venue data values
+    venueData['id'] = venue.id
+    venueData['name'] = venue.name
+    venueData['city'] = venue.city
+    venueData['state'] = venue.state
+    venueData['address'] = venue.address
+    venueData['phone'] = venue.phone
+    venueData['image_link'] = venue.image_link
+    venueData['facebook_link'] = venue.facebook_link
+    venueData['genres'] = venue.genres
+    venueData['website'] = venue.website
+    venueData['seeking_talent'] = venue.seeking_talent
+    venueData['seeking_description'] = venue.seeking_description
+    venueData['upcoming_shows'] = upcomingData
+    venueData['upcoming_shows_count'] = len(upcomingData)
+    venueData['past_shows'] = pastData
+    venueData['past_shows_count'] = len(pastData)
+  except:
+    error = True
+  if error:
+    # render 500 if there is a server error
+    return render_template('errors/500.html')
+  else:
+    return render_template('pages/show_venue.html', venue=venueData)
 
 #  Create Venue
 #  ----------------------------------------------------------------
