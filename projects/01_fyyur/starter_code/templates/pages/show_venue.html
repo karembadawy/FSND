@@ -3,9 +3,16 @@
 {% block content %}
 <div class="row">
 	<div class="col-sm-6">
-		<h1 class="monospace">
-			{{ venue.name }}
-		</h1>
+		<div class="row">
+			<div class="col-md-8">
+				<h1 class="monospace">
+					{{ venue.name }}
+				</h1>
+			</div>
+			<div class="col-md-4">
+				<button id="venue-btn-del" class="delete-button btn btn-danger" data-id="{{ venue.id }}">Delete</button>
+			</div>
+		</div>
 		<p class="subtitle">
 			ID: {{ venue.id }}
 		</p>
@@ -75,5 +82,14 @@
 	</div>
 </section>
 
+<script>
+	const deleteBtn = document.getElementById('venue-btn-del');
+	deleteBtn.onclick = function (e) {
+		const venuesId = e.target.dataset['id'];
+		fetch('/venues/' + venuesId, {
+			method: 'DELETE'
+		})
+	}
+</script>
 {% endblock %}
 

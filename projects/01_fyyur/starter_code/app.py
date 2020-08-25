@@ -94,8 +94,11 @@ app.jinja_env.filters['datetime'] = format_datetime
 def index():
   return render_template('pages/home.html')
 
-
+#  ----------------------------------------------------------------
 #  Venues
+#  ----------------------------------------------------------------
+
+#  Venues list
 #  ----------------------------------------------------------------
 
 @app.route('/venues')
@@ -129,6 +132,9 @@ def venues():
     })
 
   return render_template('pages/venues.html', areas=areasData)
+
+#  Search Venue
+#  ----------------------------------------------------------------
 
 @app.route('/venues/search', methods=['POST'])
 def search_venues():
@@ -165,6 +171,9 @@ def search_venues():
     return render_template('errors/500.html')
   else:
     return render_template('pages/search_venues.html', results=responseData, search_term=request.form.get('search_term', ''))
+
+#  Show Venue
+#  ----------------------------------------------------------------
 
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
@@ -275,17 +284,35 @@ def create_venue_submission():
     flash('Venue ' + name + ' was successfully listed!')
   return render_template('pages/home.html')
 
+#  Delete Venue
+#  ----------------------------------------------------------------
+
 @app.route('/venues/<venue_id>', methods=['DELETE'])
 def delete_venue(venue_id):
-  # TODO: Complete this endpoint for taking a venue_id, and using
-  # SQLAlchemy ORM to delete a record. Handle cases where the session commit could fail.
+  error = False
+  try:
+    # query to get specific venue
+    venue = Venue.query.get(venue_id)
+    name = venue.name
 
-  # BONUS CHALLENGE: Implement a button to delete a Venue on a Venue Page, have it so that
-  # clicking that button delete it from the db then redirect the user to the homepage
-  return None
+    db.session.delete(venue)
+    db.session.commit()
+  except:
+    error = True
+    db.session.rollback()
+  finally:
+    db.session.close()
+  if error:
+    flash('Error occurred: ' +
+          name + ' could not be deleted.')
+  else:
+    flash('Venue ' + name + ' was successfully deleted!')
+  return render_template('pages/home.html')
 
+#  ----------------------------------------------------------------
 #  Artists
 #  ----------------------------------------------------------------
+
 @app.route('/artists')
 def artists():
   # TODO: replace with real data returned from querying the database
