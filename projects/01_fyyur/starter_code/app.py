@@ -5,10 +5,12 @@
 import json
 import dateutil.parser
 import babel
-from flask import Flask, render_template, request, Response, flash, redirect, url_for
+from flask import Flask, render_template, request, Response, flash, redirect, url_for, abort
 from flask_moment import Moment
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import load_only
+from sqlalchemy import func
 import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
@@ -29,7 +31,7 @@ migrate = Migrate(app, db)
 #----------------------------------------------------------------------------#
 
 class Venue(db.Model):
-    __tablename__ = 'Venue'
+    __tablename__ = 'venues'
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(), nullable=False)
@@ -46,7 +48,7 @@ class Venue(db.Model):
     shows = db.relationship('Show', backref='venue', lazy=True)
 
 class Artist(db.Model):
-    __tablename__ = 'Artist'
+    __tablename__ = 'artists'
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(), nullable=False)
@@ -61,12 +63,14 @@ class Artist(db.Model):
     shows = db.relationship('Show', backref='artist', lazy=True)
 
 class Show(db.Model):
-    __tablename__ = 'Show'
+    __tablename__ = 'shows'
 
     id = db.Column(db.Integer, primary_key=True)
     start_date = db.Column(db.DateTime, nullable=False)
-    venue_id = db.Column(db.Integer, db.ForeignKey('Venue.id'), nullable=False)
-    artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id'), nullable=False)
+    venue_id = db.Column(db.Integer, db.ForeignKey(
+        'venues.id'), nullable=False)
+    artist_id = db.Column(db.Integer, db.ForeignKey(
+        'artists.id'), nullable=False)
 
 #----------------------------------------------------------------------------#
 # Filters.
@@ -96,45 +100,69 @@ def index():
 
 @app.route('/venues')
 def venues():
-  # TODO: replace with real venues data.
-  #       num_shows should be aggregated based on number of upcoming shows per venue.
-  data=[{
-    "city": "San Francisco",
-    "state": "CA",
-    "venues": [{
-      "id": 1,
-      "name": "The Musical Hop",
-      "num_upcoming_shows": 0,
-    }, {
-      "id": 3,
-      "name": "Park Square Live Music & Coffee",
-      "num_upcoming_shows": 1,
-    }]
-  }, {
-    "city": "New York",
-    "state": "NY",
-    "venues": [{
-      "id": 2,
-      "name": "The Dueling Pianos Bar",
-      "num_upcoming_shows": 0,
-    }]
-  }]
-  return render_template('pages/venues.html', areas=data);
+  areasData = [] # empty array to store all the data we need
+  # query to retreive all the areas in the system
+  areas = Venue.query.with_entities(Venue.state, Venue.city, func.count(
+      Venue.id)).group_by(Venue.state, Venue.city).all()
+
+  for area in areas:
+    venuesData = [] # empty array to store areas data
+    # query to retreive venue data in each area
+    venues = Venue.query.filter_by(state=area.state, city=area.city).all()
+
+    for venue in venues:
+      # query to get upcoming shows for the venue
+      upcoming_shows = Show.query.filter_by(id=venue.id).filter(
+          Show.start_date > datetime.now()).all()
+      # append venue data to the array
+      venuesData.append({
+        "id": venue.id,
+        "name": venue.name,
+        "num_upcoming_shows": len(upcoming_shows)
+      })
+
+    # append area data to the array
+    areasData.append({
+      "city": area.city,
+      "state": area.state,
+      "venues": venuesData
+    })
+
+  return render_template('pages/venues.html', areas=areasData)
 
 @app.route('/venues/search', methods=['POST'])
 def search_venues():
-  # TODO: implement search on artists with partial string search. Ensure it is case-insensitive.
-  # seach for Hop should return "The Musical Hop".
-  # search for "Music" should return "The Musical Hop" and "Park Square Live Music & Coffee"
-  response={
-    "count": 1,
-    "data": [{
-      "id": 2,
-      "name": "The Dueling Pianos Bar",
-      "num_upcoming_shows": 0,
-    }]
-  }
-  return render_template('pages/search_venues.html', results=response, search_term=request.form.get('search_term', ''))
+  error = False
+  try:
+    responseData = {}  # empty object to store all the data we need
+    # get input from search bar
+    search_term = request.form.get('search_term', '')
+    # query to search for the input
+    venues = Venue.query.filter(
+        Venue.name.ilike(f'%{search_term}%')).all()
+
+    venuesData = []  # empty array to store venues data
+
+    for venue in venues:
+      body = {} # body item of one venue
+      # query to get upcoming shows for the venue
+      upcoming_shows = Show.query.filter_by(id=venue.id).filter(
+          Show.start_date > datetime.now()).all()
+      # append venue data to the array
+      body['id'] = venue.id
+      body['name'] = venue.name
+      body['num_upcoming_shows'] = len(upcoming_shows)
+      venuesData.append(body)
+
+    # append response data to the object
+    responseData['count'] = len(venues)
+    responseData['data'] = venuesData
+  except:
+    error = True
+  if error:
+    abort(400)
+  else:
+    return render_template('pages/search_venues.html', results=responseData, search_term=request.form.get('search_term', ''))
 
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
