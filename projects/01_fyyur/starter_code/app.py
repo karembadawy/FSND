@@ -389,17 +389,17 @@ def edit_venue_submission(venue_id):
 @app.route('/artists')
 def artists():
   data = []  # empty array to store all the data we need
-  body = {}  # empty object to store artist data
   # query to retreive all artists
   artists = Artist.query.all()
 
   for artist in artists:
+    body = {}  # empty object to store artist data
     # append venue data to the array
     body['id'] = artist.id
     body['name'] = artist.name
 
-  # append artist data to the array
-  data.append(body)
+    # append artist data to the array
+    data.append(body)
 
   return render_template('pages/artists.html', artists=data)
 
@@ -442,7 +442,7 @@ def search_artists():
   else:
     return render_template('pages/search_artists.html', results=responseData, search_term=request.form.get('search_term', ''))
 
-#  Show Venue
+#  Show Artist
 #  ----------------------------------------------------------------
 
 @app.route('/artists/<int:artist_id>')
@@ -509,23 +509,65 @@ def show_artist(artist_id):
   else:
     return render_template('pages/show_artist.html', artist=artistData)
 
-#  Update
+#  Create Artist
 #  ----------------------------------------------------------------
+
+@app.route('/artists/create', methods=['GET'])
+def create_artist_form():
+  form = ArtistForm()
+  return render_template('forms/new_artist.html', form=form)
+
+@app.route('/artists/create', methods=['POST'])
+def create_artist_submission():
+  error = False
+  try:
+    # get values from form and create record on db
+    name = request.form.get('name', '')
+    artist = Artist(
+      name=name,
+      city=request.form.get('city', ''),
+      state=request.form.get('state', ''),
+      phone=request.form.get('phone', ''),
+      image_link=request.form.get('image_link'),
+      facebook_link=request.form.get('facebook_link'),
+      genres=request.form.getlist('genres'),
+      seeking_venue=True if 'seeking_venue' in request.form else False,
+      seeking_description=request.form.get('seeking_description', '')
+    )
+
+    db.session.add(artist)
+    db.session.commit()
+  except:
+    error = True
+    # rollback in case of error happen
+    db.session.rollback()
+  finally:
+    db.session.close()
+  if error:
+    flash('Error occurred: ' +
+          name + ' could not be inserted.')
+  else:
+    flash('Artist ' + name + ' was successfully listed!')
+  return render_template('pages/home.html')
+
+#  Edit Artist
+#  ----------------------------------------------------------------
+
 @app.route('/artists/<int:artist_id>/edit', methods=['GET'])
 def edit_artist(artist_id):
   form = ArtistForm()
-  artist={
-    "id": 4,
-    "name": "Guns N Petals",
-    "genres": ["Rock n Roll"],
-    "city": "San Francisco",
-    "state": "CA",
-    "phone": "326-123-5000",
-    "website": "https://www.gunsnpetalsband.com",
-    "facebook_link": "https://www.facebook.com/GunsNPetals",
-    "seeking_venue": True,
-    "seeking_description": "Looking for shows to perform at in the San Francisco Bay Area!",
-    "image_link": "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80"
+  artist = {
+      "id": 4,
+      "name": "Guns N Petals",
+      "genres": ["Rock n Roll"],
+      "city": "San Francisco",
+      "state": "CA",
+      "phone": "326-123-5000",
+      "website": "https://www.gunsnpetalsband.com",
+      "facebook_link": "https://www.facebook.com/GunsNPetals",
+      "seeking_venue": True,
+      "seeking_description": "Looking for shows to perform at in the San Francisco Bay Area!",
+      "image_link": "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80"
   }
   # TODO: populate form with fields from artist with ID <artist_id>
   return render_template('forms/edit_artist.html', form=form, artist=artist)
@@ -537,28 +579,11 @@ def edit_artist_submission(artist_id):
 
   return redirect(url_for('show_artist', artist_id=artist_id))
 
-#  Create Artist
+#  ----------------------------------------------------------------
+#  Shows
 #  ----------------------------------------------------------------
 
-@app.route('/artists/create', methods=['GET'])
-def create_artist_form():
-  form = ArtistForm()
-  return render_template('forms/new_artist.html', form=form)
-
-@app.route('/artists/create', methods=['POST'])
-def create_artist_submission():
-  # called upon submitting the new artist listing form
-  # TODO: insert form data as a new Venue record in the db, instead
-  # TODO: modify data to be the data object returned from db insertion
-
-  # on successful db insert, flash success
-  flash('Artist ' + request.form['name'] + ' was successfully listed!')
-  # TODO: on unsuccessful db insert, flash an error instead.
-  # e.g., flash('An error occurred. Artist ' + data.name + ' could not be listed.')
-  return render_template('pages/home.html')
-
-
-#  Shows
+#  Shows list
 #  ----------------------------------------------------------------
 
 @app.route('/shows')
@@ -604,6 +629,9 @@ def shows():
   }]
   return render_template('pages/shows.html', shows=data)
 
+#  Create Shows
+#  ----------------------------------------------------------------
+
 @app.route('/shows/create')
 def create_shows():
   # renders form. do not touch.
@@ -621,6 +649,10 @@ def create_show_submission():
   # e.g., flash('An error occurred. Show could not be listed.')
   # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
   return render_template('pages/home.html')
+
+#----------------------------------------------------------------------------#
+# Errors Handler.
+#----------------------------------------------------------------------------#
 
 @app.errorhandler(404)
 def not_found_error(error):
