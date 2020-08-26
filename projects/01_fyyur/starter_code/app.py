@@ -287,7 +287,7 @@ def create_venue_submission():
 #  Delete Venue
 #  ----------------------------------------------------------------
 
-@app.route('/venues/<venue_id>', methods=['DELETE'])
+@app.route('/venues/<venue_id>/delete', methods=['POST'])
 def delete_venue(venue_id):
   error = False
   try:
@@ -308,6 +308,76 @@ def delete_venue(venue_id):
   else:
     flash('Venue ' + name + ' was successfully deleted!')
   return render_template('pages/home.html')
+
+#  Edit Venue
+#  ----------------------------------------------------------------
+
+@app.route('/venues/<int:venue_id>/edit', methods=['GET'])
+def edit_venue(venue_id):
+  error = False
+  try:
+    form = VenueForm()
+    venueData = {}  # empty object to store all the data we need
+    # query to get specific venue
+    venue = Venue.query.get(venue_id)
+    if not venue:
+      # render 404 if not found
+      return render_template('errors/404.html')
+
+    # assign venue data values
+    venueData['id'] = venue.id
+    venueData['name'] = venue.name
+    venueData['city'] = venue.city
+    venueData['state'] = venue.state
+    venueData['address'] = venue.address
+    venueData['phone'] = venue.phone
+    venueData['image_link'] = venue.image_link
+    venueData['facebook_link'] = venue.facebook_link
+    venueData['genres'] = venue.genres
+    venueData['website'] = venue.website
+    venueData['seeking_talent'] = venue.seeking_talent
+    venueData['seeking_description'] = venue.seeking_description
+  except:
+    error = True
+  if error:
+    # render 500 if there is a server error
+    return render_template('errors/500.html')
+  else:
+    return render_template('forms/edit_venue.html', form=form, venue=venueData)
+
+@app.route('/venues/<int:venue_id>/edit', methods=['POST'])
+def edit_venue_submission(venue_id):
+  error = False
+  try:
+    # query to get specific venue
+    venue = Venue.query.get(venue_id)
+    name = venue.name
+    # get values from form and Update record on db
+    venue.name = request.form.get('name', '')
+    venue.city = request.form.get('city', '')
+    venue.state = request.form.get('state', '')
+    venue.address = request.form.get('address', '')
+    venue.phone = request.form.get('phone', '')
+    venue.image_link = request.form.get('image_link')
+    venue.facebook_link = request.form.get('facebook_link')
+    venue.genres = request.form.getlist('genres')
+    venue.website = request.form.get('website', '')
+    venue.seeking_talent = True if 'seeking_talent' in request.form else False
+    venue.seeking_description = request.form.get('seeking_description', '')
+
+    db.session.commit()
+  except:
+    error = True
+    # rollback in case of error happen
+    db.session.rollback()
+  finally:
+    db.session.close()
+  if error:
+    flash('Error occurred: ' +
+          name + ' could not be Edited.')
+  else:
+    flash('Venue ' + name + ' was successfully Edited!')
+  return redirect(url_for('show_venue', venue_id=venue_id))
 
 #  ----------------------------------------------------------------
 #  Artists
@@ -448,32 +518,6 @@ def edit_artist_submission(artist_id):
   # artist record with ID <artist_id> using the new attributes
 
   return redirect(url_for('show_artist', artist_id=artist_id))
-
-@app.route('/venues/<int:venue_id>/edit', methods=['GET'])
-def edit_venue(venue_id):
-  form = VenueForm()
-  venue={
-    "id": 1,
-    "name": "The Musical Hop",
-    "genres": ["Jazz", "Reggae", "Swing", "Classical", "Folk"],
-    "address": "1015 Folsom Street",
-    "city": "San Francisco",
-    "state": "CA",
-    "phone": "123-123-1234",
-    "website": "https://www.themusicalhop.com",
-    "facebook_link": "https://www.facebook.com/TheMusicalHop",
-    "seeking_talent": True,
-    "seeking_description": "We are on the lookout for a local artist to play every two weeks. Please call us.",
-    "image_link": "https://images.unsplash.com/photo-1543900694-133f37abaaa5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60"
-  }
-  # TODO: populate form with values from venue with ID <venue_id>
-  return render_template('forms/edit_venue.html', form=form, venue=venue)
-
-@app.route('/venues/<int:venue_id>/edit', methods=['POST'])
-def edit_venue_submission(venue_id):
-  # TODO: take values from the form submitted, and update existing
-  # venue record with ID <venue_id> using the new attributes
-  return redirect(url_for('show_venue', venue_id=venue_id))
 
 #  Create Artist
 #  ----------------------------------------------------------------

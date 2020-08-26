@@ -9,8 +9,13 @@
 					{{ venue.name }}
 				</h1>
 			</div>
-			<div class="col-md-4">
-				<button id="venue-btn-del" class="delete-button btn btn-danger" data-id="{{ venue.id }}">Delete</button>
+			<div class="col-md-2">
+				<a href="/venues/{{ venue.id }}/edit" class="btn btn-primary">Edit</a>
+			</div>
+			<div class="col-md-2">
+				<form action="/venues/{{ venue.id }}/delete" method="post">
+					<input class="delete-button btn btn-danger" type="submit" value="Delete">
+				</form>
 			</div>
 		</div>
 		<p class="subtitle">
@@ -82,14 +87,5 @@
 	</div>
 </section>
 
-<script>
-	const deleteBtn = document.getElementById('venue-btn-del');
-	deleteBtn.onclick = function (e) {
-		const venuesId = e.target.dataset['id'];
-		fetch('/venues/' + venuesId, {
-			method: 'DELETE'
-		})
-	}
-</script>
 {% endblock %}
 
