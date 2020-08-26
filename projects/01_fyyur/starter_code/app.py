@@ -39,9 +39,9 @@ class Venue(db.Model):
     state = db.Column(db.String(120), nullable=False)
     address = db.Column(db.String(120), nullable=True)
     phone = db.Column(db.String(120), nullable=True)
+    genres = db.Column(db.ARRAY(db.String(120)), nullable=False, default=[])
     image_link = db.Column(db.String(500), nullable=True)
     facebook_link = db.Column(db.String(120), nullable=True)
-    genres = db.Column(db.ARRAY(db.String(120)), nullable=False, default=[])
     website = db.Column(db.String(120), nullable=True)
     seeking_talent = db.Column(db.Boolean, nullable=False, default=False)
     seeking_description = db.Column(db.String(120), nullable=True)
@@ -442,83 +442,72 @@ def search_artists():
   else:
     return render_template('pages/search_artists.html', results=responseData, search_term=request.form.get('search_term', ''))
 
+#  Show Venue
+#  ----------------------------------------------------------------
+
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
-  # shows the venue page with the given venue_id
-  # TODO: replace with real venue data from the venues table, using venue_id
-  data1={
-    "id": 4,
-    "name": "Guns N Petals",
-    "genres": ["Rock n Roll"],
-    "city": "San Francisco",
-    "state": "CA",
-    "phone": "326-123-5000",
-    "website": "https://www.gunsnpetalsband.com",
-    "facebook_link": "https://www.facebook.com/GunsNPetals",
-    "seeking_venue": True,
-    "seeking_description": "Looking for shows to perform at in the San Francisco Bay Area!",
-    "image_link": "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80",
-    "past_shows": [{
-      "venue_id": 1,
-      "venue_name": "The Musical Hop",
-      "venue_image_link": "https://images.unsplash.com/photo-1543900694-133f37abaaa5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60",
-      "start_time": "2019-05-21T21:30:00.000Z"
-    }],
-    "upcoming_shows": [],
-    "past_shows_count": 1,
-    "upcoming_shows_count": 0,
-  }
-  data2={
-    "id": 5,
-    "name": "Matt Quevedo",
-    "genres": ["Jazz"],
-    "city": "New York",
-    "state": "NY",
-    "phone": "300-400-5000",
-    "facebook_link": "https://www.facebook.com/mattquevedo923251523",
-    "seeking_venue": False,
-    "image_link": "https://images.unsplash.com/photo-1495223153807-b916f75de8c5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=334&q=80",
-    "past_shows": [{
-      "venue_id": 3,
-      "venue_name": "Park Square Live Music & Coffee",
-      "venue_image_link": "https://images.unsplash.com/photo-1485686531765-ba63b07845a7?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=747&q=80",
-      "start_time": "2019-06-15T23:00:00.000Z"
-    }],
-    "upcoming_shows": [],
-    "past_shows_count": 1,
-    "upcoming_shows_count": 0,
-  }
-  data3={
-    "id": 6,
-    "name": "The Wild Sax Band",
-    "genres": ["Jazz", "Classical"],
-    "city": "San Francisco",
-    "state": "CA",
-    "phone": "432-325-5432",
-    "seeking_venue": False,
-    "image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-    "past_shows": [],
-    "upcoming_shows": [{
-      "venue_id": 3,
-      "venue_name": "Park Square Live Music & Coffee",
-      "venue_image_link": "https://images.unsplash.com/photo-1485686531765-ba63b07845a7?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=747&q=80",
-      "start_time": "2035-04-01T20:00:00.000Z"
-    }, {
-      "venue_id": 3,
-      "venue_name": "Park Square Live Music & Coffee",
-      "venue_image_link": "https://images.unsplash.com/photo-1485686531765-ba63b07845a7?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=747&q=80",
-      "start_time": "2035-04-08T20:00:00.000Z"
-    }, {
-      "venue_id": 3,
-      "venue_name": "Park Square Live Music & Coffee",
-      "venue_image_link": "https://images.unsplash.com/photo-1485686531765-ba63b07845a7?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=747&q=80",
-      "start_time": "2035-04-15T20:00:00.000Z"
-    }],
-    "past_shows_count": 0,
-    "upcoming_shows_count": 3,
-  }
-  data = list(filter(lambda d: d['id'] == artist_id, [data1, data2, data3]))[0]
-  return render_template('pages/show_artist.html', artist=data)
+  error = False
+  try:
+    artistData = {}  # empty object to store all the data we need
+    # query to get specific artist
+    artist = Artist.query.get(artist_id)
+    if not artist:
+      # render 404 if not found
+      return render_template('errors/404.html')
+
+    upcomingData = []  # empty array to store shows data
+    # query to get upcoming shows for this artist
+    upcomingShows = Show.query.join(Venue).filter(
+        Show.artist_id == artist_id).filter(Show.start_date > datetime.now()).all()
+
+    for show in upcomingShows:
+      body = {}  # body item of one show
+      # assign values to body
+      body['venue_id'] = show.venue_id
+      body['venue_name'] = show.venue.name
+      body['venue_image_link'] = show.venue.image_link
+      body['start_date'] = show.start_date.strftime(" % Y-%m-%d % H: % M: % S")
+      # append show data to the array
+      upcomingData.append(body)
+
+    pastData = []  # empty array to store shows data
+    # query to get past shows for this artist
+    pastShows = Show.query.join(Venue).filter(
+        Show.artist_id == artist_id).filter(Show.start_date < datetime.now()).all()
+
+    for show in pastShows:
+      body = {}  # body item of one show
+      # assign values to body
+      body['venue_id'] = show.venue_id
+      body['venue_name'] = show.venue.name
+      body['venue_image_link'] = show.venue.image_link
+      body['start_date'] = show.start_date.strftime(" % Y-%m-%d % H: % M: % S")
+      # append show data to the array
+      pastData.append(body)
+
+    # assign artist data values
+    artistData['id'] = artist.id
+    artistData['name'] = artist.name
+    artistData['city'] = artist.city
+    artistData['state'] = artist.state
+    artistData['phone'] = artist.phone
+    artistData['genres'] = artist.genres
+    artistData['image_link'] = artist.image_link
+    artistData['facebook_link'] = artist.facebook_link
+    artistData['seeking_venue'] = artist.seeking_venue
+    artistData['seeking_description'] = artist.seeking_description
+    artistData['upcoming_shows'] = upcomingData
+    artistData['upcoming_shows_count'] = len(upcomingData)
+    artistData['past_shows'] = pastData
+    artistData['past_shows_count'] = len(pastData)
+  except:
+    error = True
+  if error:
+    # render 500 if there is a server error
+    return render_template('errors/500.html')
+  else:
+    return render_template('pages/show_artist.html', artist=artistData)
 
 #  Update
 #  ----------------------------------------------------------------
