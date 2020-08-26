@@ -550,33 +550,95 @@ def create_artist_submission():
     flash('Artist ' + name + ' was successfully listed!')
   return render_template('pages/home.html')
 
+#  Delete Artist
+#  ----------------------------------------------------------------
+
+@app.route('/artists/<artist_id>/delete', methods=['POST'])
+def delete_artist(artist_id):
+  error = False
+  try:
+    # query to get specific artist
+    artist = Artist.query.get(artist_id)
+    name = artist.name
+
+    db.session.delete(artist)
+    db.session.commit()
+  except:
+    error = True
+    db.session.rollback()
+  finally:
+    db.session.close()
+  if error:
+    flash('Error occurred: ' +
+          name + ' could not be deleted.')
+  else:
+    flash('Artist ' + name + ' was successfully deleted!')
+  return render_template('pages/home.html')
+
 #  Edit Artist
 #  ----------------------------------------------------------------
 
 @app.route('/artists/<int:artist_id>/edit', methods=['GET'])
 def edit_artist(artist_id):
-  form = ArtistForm()
-  artist = {
-      "id": 4,
-      "name": "Guns N Petals",
-      "genres": ["Rock n Roll"],
-      "city": "San Francisco",
-      "state": "CA",
-      "phone": "326-123-5000",
-      "website": "https://www.gunsnpetalsband.com",
-      "facebook_link": "https://www.facebook.com/GunsNPetals",
-      "seeking_venue": True,
-      "seeking_description": "Looking for shows to perform at in the San Francisco Bay Area!",
-      "image_link": "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80"
-  }
-  # TODO: populate form with fields from artist with ID <artist_id>
-  return render_template('forms/edit_artist.html', form=form, artist=artist)
+  error = False
+  try:
+    form = ArtistForm()
+    artistData = {}  # empty object to store all the data we need
+    # query to get specific artist
+    artist = Artist.query.get(artist_id)
+    if not artist:
+      # render 404 if not found
+      return render_template('errors/404.html')
+
+    # assign artist data values
+    artistData['id'] = artist.id
+    artistData['name'] = artist.name
+    artistData['city'] = artist.city
+    artistData['state'] = artist.state
+    artistData['phone'] = artist.phone
+    artistData['image_link'] = artist.image_link
+    artistData['facebook_link'] = artist.facebook_link
+    artistData['genres'] = artist.genres
+    artistData['seeking_venue'] = artist.seeking_venue
+    artistData['seeking_description'] = artist.seeking_description
+  except:
+    error = True
+  if error:
+    # render 500 if there is a server error
+    return render_template('errors/500.html')
+  else:
+    return render_template('forms/edit_artist.html', form=form, artist=artist)
 
 @app.route('/artists/<int:artist_id>/edit', methods=['POST'])
 def edit_artist_submission(artist_id):
-  # TODO: take values from the form submitted, and update existing
-  # artist record with ID <artist_id> using the new attributes
+  error = False
+  try:
+    # query to get specific artist
+    artist = Artist.query.get(artist_id)
+    name = artist.name
+    # get values from form and Update record on db
+    artist.name = request.form.get('name', '')
+    artist.city = request.form.get('city', '')
+    artist.state = request.form.get('state', '')
+    artist.phone = request.form.get('phone', '')
+    artist.image_link = request.form.get('image_link')
+    artist.facebook_link = request.form.get('facebook_link')
+    artist.genres = request.form.getlist('genres')
+    artist.seeking_venue = True if 'seeking_venue' in request.form else False
+    artist.seeking_description = request.form.get('seeking_description', '')
 
+    db.session.commit()
+  except:
+    error = True
+    # rollback in case of error happen
+    db.session.rollback()
+  finally:
+    db.session.close()
+  if error:
+    flash('Error occurred: ' +
+          name + ' could not be Edited.')
+  else:
+    flash('Artist ' + name + ' was successfully Edited!')
   return redirect(url_for('show_artist', artist_id=artist_id))
 
 #  ----------------------------------------------------------------
