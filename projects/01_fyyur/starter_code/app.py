@@ -383,35 +383,64 @@ def edit_venue_submission(venue_id):
 #  Artists
 #  ----------------------------------------------------------------
 
+#  Artists list
+#  ----------------------------------------------------------------
+
 @app.route('/artists')
 def artists():
-  # TODO: replace with real data returned from querying the database
-  data=[{
-    "id": 4,
-    "name": "Guns N Petals",
-  }, {
-    "id": 5,
-    "name": "Matt Quevedo",
-  }, {
-    "id": 6,
-    "name": "The Wild Sax Band",
-  }]
+  data = []  # empty array to store all the data we need
+  body = {}  # empty object to store artist data
+  # query to retreive all artists
+  artists = Artist.query.all()
+
+  for artist in artists:
+    # append venue data to the array
+    body['id'] = artist.id
+    body['name'] = artist.name
+
+  # append artist data to the array
+  data.append(body)
+
   return render_template('pages/artists.html', artists=data)
+
+#  Search Artists
+#  ----------------------------------------------------------------
 
 @app.route('/artists/search', methods=['POST'])
 def search_artists():
-  # TODO: implement search on artists with partial string search. Ensure it is case-insensitive.
-  # seach for "A" should return "Guns N Petals", "Matt Quevado", and "The Wild Sax Band".
-  # search for "band" should return "The Wild Sax Band".
-  response={
-    "count": 1,
-    "data": [{
-      "id": 4,
-      "name": "Guns N Petals",
-      "num_upcoming_shows": 0,
-    }]
-  }
-  return render_template('pages/search_artists.html', results=response, search_term=request.form.get('search_term', ''))
+  error = False
+  try:
+    responseData = {}  # empty object to store all the data we need
+    # get input from search bar
+    search_term = request.form.get('search_term', '')
+    # query to search for the input
+    artists = Artist.query.filter(
+        Artist.name.ilike(f'%{search_term}%')).all()
+
+    artistsData = []  # empty array to store artists data
+
+    for artist in artists:
+      body = {}  # body item of one artist
+      # query to get upcoming shows for the artist
+      upcoming_shows = Show.query.filter_by(id=artist.id).filter(
+          Show.start_date > datetime.now()).all()
+      # assign values to body
+      body['id'] = artist.id
+      body['name'] = artist.name
+      body['num_upcoming_shows'] = len(upcoming_shows)
+      # append artist data to the array
+      artistsData.append(body)
+
+    # append response data to the object
+    responseData['count'] = len(artists)
+    responseData['data'] = artistsData
+  except:
+    error = True
+  if error:
+    # render 500 if there is a server error
+    return render_template('errors/500.html')
+  else:
+    return render_template('pages/search_artists.html', results=responseData, search_term=request.form.get('search_term', ''))
 
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
