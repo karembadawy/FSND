@@ -50,6 +50,50 @@ class TriviaTestCase(unittest.TestCase):
     self.assertTrue(data['total_questions'])
     self.assertTrue(data['current_category'])
 
+  # test Questions list
+  def test_categories(self):
+    # make request
+    request = self.client().get('/questions')
+    data = json.loads(request.data)
+
+    # test results
+    self.assertEqual(data['success'], True)
+    self.assertTrue(data['questions'])
+    self.assertTrue(len(data['total_questions']))
+
+  # test Create Question
+  def test_add_question(self):
+    # prepare question object
+    question = {
+      'question': 'new question',
+      'answer': 'new answer',
+      'difficulty': 1,
+      'category': 1
+    }
+    # store questions count before insert
+    questions_count = len(Question.query.all())
+    # make request
+    request = self.client().post('/questions', json=question)
+    data = json.loads(request.data)
+    # store questions count after insert
+    questions_count_after = len(Question.query.all())
+
+    # test results
+    self.assertEqual(data["success"], True)
+    self.assertEqual(questions_count_after, questions_count + 1)
+
+  def test_search_question(self):
+    # prepare search object
+    search = {'searchTerm': 'test'}
+    # make request
+    request = self.client().post('/questions', json=search)
+    data = json.loads(request.data)
+
+    # test results
+    self.assertEqual(data['success'], True)
+    self.assertIsNotNone(data['questions'])
+    self.assertIsNotNone(data['total_questions'])
+
 # Make the tests conveniently executable
 if __name__ == "__main__":
   unittest.main()

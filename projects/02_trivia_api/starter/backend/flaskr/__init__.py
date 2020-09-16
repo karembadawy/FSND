@@ -125,7 +125,7 @@ def create_app(test_config=None):
   #  ----------------------------------------------------------------
 
   @app.route("/questions", methods=['POST'])
-  def add_question():
+  def add_search_question():
     # get values from form
     body = request.get_json()
 
