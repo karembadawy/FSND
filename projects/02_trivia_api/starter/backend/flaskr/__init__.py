@@ -57,11 +57,14 @@ def create_app(test_config=None):
 
   @app.route('/categories')
   def categories():
+    # query to retreive all the categories in the system
     selection = Category.query.order_by(Category.id).all()
 
+    # raise 404 error code if there is no categories found
     if len(selection) == 0:
       abort(404)
 
+    # return results in json form
     return jsonify({
       'success': True,
       'categories': { cat.id: cat.type for cat in selection },
@@ -77,14 +80,18 @@ def create_app(test_config=None):
 
   @app.route('/questions')
   def list_questions():
+    # query to retreive all the questions in the system
     selection = Question.query.order_by(Question.id).all()
+    # handle pagination
     current_questions = paginate_questions(request, selection)
-
+    # query to retreive all the categories in the system
     categories = Category.query.order_by(Category.id).all()
 
+    # raise 404 error code if there is no questions found
     if len(current_questions) == 0:
       abort(404)
 
+    # return results in json form
     return jsonify({
       'success': True,
       'questions': current_questions,
@@ -92,6 +99,43 @@ def create_app(test_config=None):
       'categories': {cat.id: cat.type for cat in categories},
       'current_category': None
     })
+
+  #  Create Question
+  #  ----------------------------------------------------------------
+
+  @app.route("/questions", methods=['POST'])
+  def add_question():
+    # get values from form
+    body = request.get_json()
+
+    new_question = body.get('question', None)
+    new_answer = body.get('answer', None)
+    new_category = body.get('category', None)
+    new_difficulty = body.get('difficulty', None)
+
+    try:
+      # create and insert record on db
+      question = Question(
+        question = new_question,
+        answer = new_answer,
+        category = new_category,
+        difficulty = new_difficulty
+      )
+
+      question.insert()
+      selection = Question.query.order_by(Question.id).all()
+      current_questions = paginate_questions(request, selection)
+
+      # return results in json form
+      return jsonify({
+        'success': True,
+        'created': question.id,
+        'questions': current_questions,
+        'total_questions': len(selection)
+      })
+    except:
+      # raise 422 error code if any error happend while create question
+      abort(422)
 
   #  Delete Question
   #  ----------------------------------------------------------------
@@ -102,13 +146,16 @@ def create_app(test_config=None):
       question = Question.query.filter(
           Question.id == question_id).one_or_none()
 
+      # raise 404 error code if there is no questions found
       if question is None:
         abort(404)
 
+      # delete question
       question.delete()
       selection = Question.query.order_by(Question.id).all()
       current_questions = paginate_questions(request, selection)
 
+      # return results in json form
       return jsonify({
         'success': True,
         'deleted': question_id,
@@ -116,20 +163,8 @@ def create_app(test_config=None):
         'total_questions': len(selection)
       })
     except:
+      # raise 422 error code if any error happend while delete question
       abort(422)
-
-  #  Create Question
-  #  ----------------------------------------------------------------
-  '''
-  @TODO: 
-  Create an endpoint to POST a new question, 
-  which will require the question and answer text, 
-  category, and difficulty score.
-
-  TEST: When you submit a question on the "Add" tab, 
-  the form will clear and the question will appear at the end of the last page
-  of the questions list in the "List" tab.  
-  '''
 
   '''
   @TODO: 
@@ -164,10 +199,24 @@ def create_app(test_config=None):
   and shown whether they were correct or not. 
   '''
 
-  '''
-  @TODO: 
-  Create error handlers for all expected errors 
-  including 404 and 422. 
-  '''
+  #----------------------------------------------------------------------------#
+  # Errors Handler.
+  #----------------------------------------------------------------------------#
+
+  @app.errorhandler(404)
+  def not_found(error):
+    return jsonify({
+      "success": False,
+      "error": 404,
+      "message": "resource not found"
+    }), 404
+
+  @app.errorhandler(422)
+  def unprocessable(error):
+    return jsonify({
+      "success": False,
+      "error": 422,
+      "message": "unprocessable"
+    }), 422
 
   return app
