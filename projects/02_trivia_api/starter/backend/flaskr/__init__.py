@@ -112,27 +112,46 @@ def create_app(test_config=None):
     new_answer = body.get('answer', None)
     new_category = body.get('category', None)
     new_difficulty = body.get('difficulty', None)
+    search = body.get('searchTerm', None)
 
     try:
-      # create and insert record on db
-      question = Question(
-        question = new_question,
-        answer = new_answer,
-        category = new_category,
-        difficulty = new_difficulty
-      )
+      if search:
+        # query to retreive searched questions in the system
+        selection = Question.query.order_by(Question.id).filter(
+            Question.question.ilike('%{}%'.format(search)))
+        # handle pagination
+        current_questions = paginate_questions(request, selection)
 
-      question.insert()
-      selection = Question.query.order_by(Question.id).all()
-      current_questions = paginate_questions(request, selection)
+        # raise 404 error code if there is no search found
+        if len(selection) == 0:
+          abort(404)
 
-      # return results in json form
-      return jsonify({
-        'success': True,
-        'created': question.id,
-        'questions': current_questions,
-        'total_questions': len(selection)
-      })
+        # return results in json form
+        return jsonify({
+            'success': True,
+            'questions': current_questions,
+            'total_questions': len(selection)
+        })
+      else:
+        # create and insert record on db
+        question = Question(
+          question = new_question,
+          answer = new_answer,
+          category = new_category,
+          difficulty = new_difficulty
+        )
+
+        question.insert()
+        selection = Question.query.order_by(Question.id).all()
+        current_questions = paginate_questions(request, selection)
+
+        # return results in json form
+        return jsonify({
+          'success': True,
+          'created': question.id,
+          'questions': current_questions,
+          'total_questions': len(selection)
+        })
     except:
       # raise 422 error code if any error happend while create question
       abort(422)
@@ -165,17 +184,6 @@ def create_app(test_config=None):
     except:
       # raise 422 error code if any error happend while delete question
       abort(422)
-
-  '''
-  @TODO: 
-  Create a POST endpoint to get questions based on a search term. 
-  It should return any questions for whom the search term 
-  is a substring of the question. 
-
-  TEST: Search by any phrase. The questions list will update to include 
-  only question that include that string within their question. 
-  Try using the word "title" to start. 
-  '''
 
   '''
   @TODO: 
