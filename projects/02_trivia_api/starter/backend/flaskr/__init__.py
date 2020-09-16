@@ -71,6 +71,27 @@ def create_app(test_config=None):
       'total_categories': len(selection)
     })
 
+  #  Questions list based on category
+  #  ----------------------------------------------------------------
+
+  @app.route('/categories/<int:category_id>/questions')
+  def questions_category(category_id):
+    # query to retreive all the questions in the system based on category
+    selection = Question.query.filter(
+      Question.category == str(category_id)).all()
+
+    # raise 404 error code if there is no categories found
+    if len(selection) == 0:
+      abort(404)
+
+    # return results in json form
+    return jsonify({
+      'success': True,
+      'questions': [q.format() for q in selection],
+      'total_questions': len(selection),
+      'current_category': category_id
+    })
+
   #  ----------------------------------------------------------------
   #  Questions
   #  ----------------------------------------------------------------
@@ -100,7 +121,7 @@ def create_app(test_config=None):
       'current_category': None
     })
 
-  #  Create Question
+  #  Create and Search Question
   #  ----------------------------------------------------------------
 
   @app.route("/questions", methods=['POST'])
@@ -184,15 +205,6 @@ def create_app(test_config=None):
     except:
       # raise 422 error code if any error happend while delete question
       abort(422)
-
-  '''
-  @TODO: 
-  Create a GET endpoint to get questions based on category. 
-
-  TEST: In the "List" tab / main screen, clicking on one of the 
-  categories in the left column will cause only questions of that 
-  category to be shown. 
-  '''
 
 
   '''
