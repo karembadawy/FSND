@@ -206,18 +206,44 @@ def create_app(test_config=None):
       # raise 422 error code if any error happend while delete question
       abort(422)
 
+  #  ----------------------------------------------------------------
+  #  Quizzes
+  #  ----------------------------------------------------------------
 
-  '''
-  @TODO: 
-  Create a POST endpoint to get questions to play the quiz. 
-  This endpoint should take category and previous question parameters 
-  and return a random questions within the given category, 
-  if provided, and that is not one of the previous questions. 
+  #  Quiz play
+  #  ----------------------------------------------------------------
 
-  TEST: In the "Play" tab, after a user selects "All" or a category,
-  one question at a time is displayed, the user is allowed to answer
-  and shown whether they were correct or not. 
-  '''
+  @app.route('/quizzes', methods=['POST'])
+  def play_quiz():
+    try:
+      # get values from form
+      body = request.get_json()
+
+      category = body.get('quiz_category', None)
+      questions = body.get('previous_questions', None)
+
+      # prepare list of questions based on selected category
+      if category['type'] == 'click':
+        available_questions = Question.query.filter(
+          Question.id.notin_(questions)
+        ).all()
+      else:
+        available_questions = Question.query.filter_by(
+          category=category['id']
+        ).filter(Question.id.notin_(questions)).all()
+
+      # prepare new question for the next round
+      question = available_questions[random.randrange(
+        0, len(available_questions)
+      )].format() if len(available_questions) > 0 else None
+
+      # return results in json form
+      return jsonify({
+        'success': True,
+        'question': question
+      })
+    except:
+      abort(422)
 
   #----------------------------------------------------------------------------#
   # Errors Handler.
