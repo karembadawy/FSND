@@ -57,7 +57,7 @@ class TriviaTestCase(unittest.TestCase):
     self.assertTrue(data['current_category'])
 
   # test Questions list
-  def test_categories(self):
+  def test_questions(self):
     # make request
     request = self.client().get('/questions')
     data = json.loads(request.data)
@@ -65,7 +65,8 @@ class TriviaTestCase(unittest.TestCase):
     # test results
     self.assertEqual(data['success'], True)
     self.assertTrue(data['questions'])
-    self.assertTrue(len(data['total_questions']))
+    self.assertTrue(len(data['questions']))
+    self.assertTrue(data['total_questions'])
 
   # test Create Question
   def test_add_question(self):
@@ -88,6 +89,7 @@ class TriviaTestCase(unittest.TestCase):
     self.assertEqual(data["success"], True)
     self.assertEqual(questions_count_after, questions_count + 1)
 
+  # test Search Question
   def test_search_question(self):
     # prepare search object
     search = {'searchTerm': 'test'}
@@ -99,6 +101,72 @@ class TriviaTestCase(unittest.TestCase):
     self.assertEqual(data['success'], True)
     self.assertIsNotNone(data['questions'])
     self.assertIsNotNone(data['total_questions'])
+
+  # test Delete Question
+  def test_delete_question(self):
+    # prepare question object
+    question = {
+      'question': 'test question',
+      'answer': 'test answer',
+      'difficulty': 1,
+      'category': 1
+    }
+    # make request to create question
+    self.client().post('/questions', json=question)
+    questions = Question.query.all()
+    last_add = questions[-1]
+    # store questions count before delete
+    questions_count = len(Question.query.all())
+    # delete question
+    result = self.client().delete(f'/questions/{last_add.id}')
+    data = json.loads(result.data)
+    # store questions count after insert
+    questions_count_after = len(Question.query.all())
+
+    # test results
+    self.assertEqual(data["success"], True)
+    self.assertEqual(questions_count_after, questions_count - 1)
+
+  # test Play Quiz
+  def test_play_quiz(self):
+    # prepare round data
+    round = {
+      'quiz_category': {'type': 'Science', 'id': 1},
+      'previous_questions': []
+    }
+    # make request
+    request = self.client().post('/quizzes', json=round)
+    data = json.loads(request.data)
+
+    # test results
+    self.assertEqual(data['success'], True)
+
+  # test 404 of get categories
+  def test_404_category(self):
+    # make request
+    request = self.client().get('/categories/100')
+    data = json.loads(request.data)
+
+    # test results
+    self.assertEqual(request.status_code, 404)
+    self.assertEqual(data['success'], False)
+    self.assertEqual(data['message'], 'resource not found')
+
+  # test 422 of add question
+  def test_422_add_question(self):
+    # prepare question object
+    question = {
+      'question': 'test question',
+      'answer': 'test answer'
+    }
+    # make request
+    request = self.client().post('/questions', json=question)
+    data = json.loads(request.data)
+
+    # test results
+    self.assertEqual(res.status_code, 422)
+    self.assertEqual(data["success"], False)
+    self.assertEqual(data["message"], "unprocessable")
 
 # Make the tests conveniently executable
 if __name__ == "__main__":
